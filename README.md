@@ -264,6 +264,202 @@ useEffect(() => {
 
 Now, even if the attacker is able to inject some script tags through divRef, it will be rendered as a string in your application. This kind of pattern is rare, and you should always avoid mutating DOM directly using refs.
 
+# CSRF (Cross Site Request Forgery)
+
+Do you ignore your spam emails? To be honest, they could be more dangerous than you think. Be cautious when visiting a website flooded with advertisements and clickbait. An attacker behind the screen may trick you into doing something malicious, such as deleting your account on a website, transferring funds illegitimately, and so on. These are all possible outcomes of a CSRF attack.
+
+Other names for these attacks are ["one-click attacks" or "session riding"](<https://www.techopedia.com/definition/172/cross-site-request-forgery-csrf#:~:text=Cross%2Dsite%20request%20forgery%20(CSRF)%20is%20a%20type%20of,from%20a%20trusted%20website%20user.&text=This%20term%20is%20also%20known,or%20a%20one%2Dclick%20attack.>). CSRF attacks aren't common these days. But understanding how they work is vital if you want to build secure services and web applications. And even in the past few years, CSRF attacks have gotten well-known companies into trouble.
+
+## A Bird's-Eye View of CSRF
+
+### Cross-Site Request
+
+The "cross-site request" part simply means a request sent from site A that was supposed to be sent from site B. This doesn't sound that bad, right? Well, only if I authorized that request.
+
+For instance, it's fine if I delete my Firebase account from my Google account. However, if I were to do the same using my random XYZ account, chances are that my Firebase account is compromised.
+
+The next question is: Why would I do that? Why would I want to delete my Firebase account using some other random website that has no correlation with it?
+
+There could be a couple of use cases that cater to this scenario. For instance, I might authorize my Google Cloud account to delete my Firebase account. Similarly, I might authorize my Facebook account to delete my Instagram account. However, if I visit a random website that wipes out my Instagram account, I'd be concerned about the security of my social media handles.
+
+### Forgery
+
+The other part of the term, "forgery," means forcibly and illegally carrying out an action you aren't authorized to do.
+
+So if you put two and two together, CSRF or cross-site request forgery means an unknown application forges a request to your server. But how does an attacker send a request on your behalf?
+
+## A CSRF Attack in Action
+
+Now that you have a good idea of what CSRF really means, let's look at how an attacker might execute a CSRF attack on your application.
+
+For the purpose of this example, let's say you've got a web application with a ReactJS front end that interacts with the back end server.
+
+## Application Demo
+
+Let's say your application has a simple home page and a profile page. The home page of your application is visible to anyone on the web. For brevity, the following application shows a simple page that lists a couple of users.
+
+![Home Page Demo.](https://images.ctfassets.net/nx13ojx82pll/2Epkfe1EfdyR3f4thXhOfz/f1345a4f5411dc1993fe872d42e71755/react-csrf-protection-guide-examples-and-how-to-enable-it-picture-2.png?w=1802&h=790&q=80&fm=webp)
+
+However, in order to access the profile page, a user must be authenticated on the app. Inside the profile page, there's a small button that enables the user to delete their account. Let's say the profile page looks like this.
+
+![Profile Page Demo.](https://images.ctfassets.net/nx13ojx82pll/6AxQqCNkfD02WospUr7FOY/21c07a3e60d3f7159f33f89c6a0d15a0/react-csrf-protection-guide-examples-and-how-to-enable-it-picture-3.png?w=1796&h=694&q=80&fm=webp)
+
+## Authentication Flow
+
+Let's say your user tries to log in to your application using a login form. The user fills in this form to validate her credentials from the server. Like most typical authentication flows, the server sends a cookie that's used to manage the session of the user. This cookie is stored in the browser and is sent back with every request to validate the authenticity of the user.
+
+## The Vulnerability
+
+Let's say a user wants to delete her account on your site. To do this, she must click a Delete button. However, only a user who has signed in to the application can perform this action.
+
+When the user presses Delete, the client sends a delete request to your server. The server processes this request and carries out a delete operation on your database. Your delete request would look somewhat like this:
+
+![CSRF Attack Request.](https://images.ctfassets.net/nx13ojx82pll/3Da3UL7JcGJWuNGk3jRtxN/a34218e2b9889f2735c0b80513ebcdf3/react-csrf-protection-guide-examples-and-how-to-enable-it-picture-4.png?w=1800&h=574&q=80&fm=webp)
+
+To validate the authenticity of the delete request, the user's browser stores the session token as a cookie. However, this leaves a CSRF vulnerability in your application. An attacker can send a delete request to your server with the cookie present in the browser. All they need you to do is open a link with a hidden form that triggers this delete request in the background. Let's see how this works.
+
+## The Attack
+
+In this example, the triggering point for the attack is opening a URL. The attacker generates a URL that points to another web application. The attacker then uses social engineering to open that URL in the user's browser.
+
+As soon as the application loads, it gets access to the session cookie stored in your browser. And that's it! The attack could be triggered under the hood, in the background, while the malicious link loads.
+
+## Aftermaths of the Attack
+
+Your user would have no idea that she was under a CSRF attack! Eventually, though, she'd question your application's credibility and might not want to use your app again.
+
+The scale of this attack may be huge, which makes it even worse for you if the attacks delete the accounts of a large number of users. This makes your product look weak and eventually affects your business. You may lose a ton of users—and if the word gets out, you may lose some potential users as well.
+
+Hence, it's important to safeguard your system from a CSRF attack. Let's see how you can do so.
+
+## CSRF Protection: Myth Busters
+
+To understand how you can protect your application from a CSRF attack, you must first understand the solutions that aren't reliable. These solutions seem easy, but an attacker can easily bypass them. And your application might still be vulnerable to a CSRF attack.
+
+Let's have a quick glimpse at these:
+
+### Using Web Storage Instead of Cookies
+
+Do you think you can store the authentication tokens inside the browser's local or session storage instead of cookies to solve this problem? Think again. The attacker can access any data you store on your browser's local storage by running the following line of code:
+
+```js
+const token = localStorage.getItem("token");
+```
+
+And once the attacker gets access to your session token, you're back to square one! Sure, this might add another blocking step for the attacker, but it definitely isn't a reliable solution.
+
+### Using a POST Request
+
+If you refactor your server endpoints and make every endpoint a POST request, you're still not completely safe from a CSRF attack. In the previous section, I illustrated an example of a delete request to delete the user's account. This could have been a GET request as well.
+
+You might think that using a POST request will add another pain point for the attacker to figure out the request body and parameters. However, it's still merely another barrier and not a foolproof solution.
+
+## CSRF Protection: The Reliable Solution
+
+Let's go through the steps you can follow to protect your application against a CSRF attack.
+
+### Using CORS on the Server
+
+CORS stands for cross-origin resource sharing. It's a protocol that allows your client to send requests and accept responses from a server that has a different origin. Normally, the browser uses an SOP or same-origin policy to ensure that your server only listens to requests from clients of the same origin.
+
+However, sometimes you want to expose some public API endpoints of your server so different clients can access it. Or maybe you simply wish to host your server and client on different domains. In these scenarios, the browser's SOP doesn't allow your server to communicate with your client as a security measure.
+
+CORS lets you work around that problem so your server can communicate with clients of different origins. This is possible if your server has the following line of code inside the request handlers or middleware.
+
+```js
+app.get('/delete',(req,res)=>{
+ res.set('Access-Control-Allow-Origin', '*');
+ ...
+
+})
+// Instead of accepting requests from any client, limit your server to accept requests from only your client. For instance, if your client is running csrfprotection-client.com and the server is running csrfprotection-server.com, replace the above lines with the following ones.
+app.get('/delete',(req,res)=>{
+   res.set('Access-Control-Allow-Origin', 'csrfprotection-client.com');
+   ...
+})
+```
+
+You can learn more about CORS [here](https://github.com/ashwin-magalu/react-vulnerabilities-fixes/tree/master?tab=readme-ov-file#cors)
+
+### Using CSRF Tokens
+
+CSRF tokens, also called anti-CSRF tokens, let your server communicate to the client before an authenticated request is made that may be tampered with. Let's go back to the previous example, where an attacker sent a delete request from a client from your browser.
+
+Let's say you have a NodeJS and Express back end that interacts with your React client. You can install a library called csurf that's used to generate CSRF tokens, and you can send them to your client through an endpoint.
+
+```console
+npm i csurf
+```
+
+Now you need to add the following endpoint.
+
+```js
+const csrfProtection = csrf({
+  cookie: true,
+});
+app.use(csrfProtection);
+app.get("/getCSRFToken", (req, res) => {
+  res.json({ CSRFToken: req.CSRFToken() });
+});
+```
+
+The above is a simple GET endpoint that returns a CSRF token.You can send a GET request to that endpoint to retrieve the CSRF token. I'm using Axios in this example, but you can also use Fetch API to send valid headers with the X-CSRF-Token attached to the request.
+
+```js
+const getCSRFToken = async () => {
+  const response = await axios.get("/getCSRFToken");
+  axios.defaults.headers.post["X-CSRF-Token"] = response.data.CSRFToken;
+};
+```
+
+Let's say your minimal profile page component in React looks like this.
+
+```js
+import { useState, useEffect } from "react";
+
+export default function Profile() {
+  const [user, setUser] = useState();
+  const getUsers = async () => {
+    const response = await fetch("https://randomuser.me/api/");
+    const data = await response.json();
+    console.log(data.results[0]);
+    setUser(data.results[0]);
+  };
+  useEffect(() => {
+    getUsers();
+  }, []);
+  const handleDelete = () => {};
+  return (
+    <div className="users">
+      <div className="user">
+        <div className="user__img">
+          <img src={user.picture.thumbnail} />
+        </div>
+        <div className="user__name">
+          {user.name.first + " " + user.name.last}
+        </div>
+        <div className="delete" onClick={handleDelete}>
+          DELETE
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+You can then call the getCSRFToken function inside the useEffect as shown:
+
+```js
+useEffect(() => {
+  getUsers();
+  getCSRFToken();
+}, []);
+```
+
+That's it! This CSRF token is sent alongside every request, and it generates every time your profile page loads.
+
+However, you need to make sure you don't have any XSS vulnerabilities in your application that can leak these tokens to the attacker.
+
 # XML External Entities
 
 XML, or Extensible Markup Language, is a markup language and file format for storing, transmitting, and reconstructing arbitrary data. In addition, this language is used in the programming world to define rules for encoding documents in a format that is both human-readable and machine-readable.
@@ -501,3 +697,211 @@ const getAppVersion = async () => {
 The above code validates the query parameters on the front end before sending them in the request. The validateQueryParam function checks if the query parameters are infiltrated. If this function returns true, the front end blocks the API request and throws an alert.
 
 You can also validate the query parameters against a more robust regular expression.
+
+# CORS
+
+CORS stands for cross-origin resource sharing. Just like HTTPS, it's a protocol that defines some rules for sharing resources from a different origin. We know that modern web apps consist of two key components: a client and a server. The client requests some data from the server, and the server sends back data as a response.
+
+![Client-server request response.](https://images.ctfassets.net/nx13ojx82pll/3rBFP0LGueb25YZDsL7R1Q/ef91399198a7c4245b0452f0edf70d99/react-cors-guide-what-it-is-and-how-to-enable-it-picture-1.png?w=1372&h=1150&q=80&fm=webp)
+
+This architecture is popular these days because it allows your back end to be used independently across multiple clients like a web app, a desktop GUI, or a native application.
+
+## The Same-Origin Policy
+
+Since the client and server are separate applications, they're usually hosted on different domains. Therefore, your own client that's requesting data from your own server might have different origins. In another scenario, you might use some third-party services for authentication, analytics, etc. The bottom line is that at some point you are going to interact with an application with a different origin than yours. This means you're going to request resources from the application by making an HTTP request.
+
+![Browser's same-origin policy.](https://images.ctfassets.net/nx13ojx82pll/yFNBCE2O76qQZ6qD0hPFG/b8ccd2139f848b881c63f08c5d7ec772/react-cors-guide-what-it-is-and-how-to-enable-it-picture-2.png?w=1000&h=1500&q=80&fm=webp)
+
+When you request a resource from an application of a different origin, the web browser uses an SOP (same-origin policy) protocol to block all your requests to that origin. Back in the day, this is what made the Internet secure! For instance, a malicious cracker or hacker from xyz.com wouldn't be able to access your information on abcbank.com. However, this underlying security rule governing browsers does not allow you to request a resource from a different origin. That's a common use case widely used across web apps today. So what's the solution?
+
+## Enter CORS
+
+CORS enables you to access a resource from a different origin. It is used to override your browser's default behavior due to SOP. So now when your client requests a resource, the response will additionally contain a stamp that tells your browser to allow resource sharing across different origins.
+
+![Client-server request response with CORS enabled.](https://images.ctfassets.net/nx13ojx82pll/5WKTY2QqHenFHlNFcnyq7d/23b3a207efe7c9ab47dbd3b1376cc63e/react-cors-guide-what-it-is-and-how-to-enable-it-picture-3.png?w=1244&h=960&q=80&fm=webp)
+
+Once your browser identifies this stamp, responses for requests from different origins are allowed to pass through. That's precisely what CORS is, and I hope you understand enough to see it in action. If you wish to learn more about it, [click here](https://www.stackhawk.com/blog/what-is-cors/).
+
+## Create Express Server With API Endpoints
+
+In order to enable CORS, you need to create
+
+- A client that can request resources from a server
+- A server with some endpoints that can send a response back to the client
+
+Needless to say, both client and server should be running on different domains or have different origins. We can use React to create a simple client that requests resources from a server. However, we first need a server that can serve as an endpoint the client can request a resource from.
+
+Let's create a simple server using Express with some API endpoints. Inside the directory of your choice, run the following command:
+
+```console
+mkdir cors-server && cd cors-server
+```
+
+You should now have an empty folder named cors-server. Let's initialize a new npm project inside it by running
+
+```console
+npm init -y
+```
+
+You should now have a package.json file inside the project. Great! Let's install Express, a lightweight NodeJS framework for creating web applications.
+
+```console
+npm i express
+```
+
+Next, create an app.js file inside the root directory and add the following code to it:
+
+```js
+const express = require("express");
+const app = express();
+app.get("/", (req, res) => {
+  res.send("Welcome to CORS server 😁");
+});
+app.get("/cors", (req, res) => {
+  res.send("This has CORS enabled 🎈");
+});
+app.listen(8080, () => {
+  console.log("listening on port 8080");
+});
+```
+
+In the above code, I have created a minimal server using Express that listens on port 8080. I have two routes, the / and /cors that sends a response.
+
+Let's run our server using the following command:
+
+```console
+node app
+```
+
+If you point your browser to http://localhost:8080/, you should see something like this:
+
+![Express Server Endpoint.](https://images.ctfassets.net/nx13ojx82pll/6c8teIrh9ae3COBkjveEuu/01e1943f2f0adb9366b54c6fe7e48bc4/react-cors-guide-what-it-is-and-how-to-enable-it-picture-4.png?w=1586&h=210&q=80&fm=webp)
+
+And if you visit http://localhost:8080/cors, you should see something like this:
+
+![Express Server Endpoint /cors.](https://images.ctfassets.net/nx13ojx82pll/6EtmflHkEOFRMtlo25zPLT/3331ec993be93b6e2f571fb946a606c7/react-cors-guide-what-it-is-and-how-to-enable-it-picture-5.png?w=1600&h=194&q=80&fm=webp)
+
+## Set Up React App
+
+Now that we have a server up and running, let's set up a simple React app where we can make requests to our server. Create an empty React App by running
+
+```console
+npx create-react-app react-cors-guide
+```
+
+Head over to your App.js and replace it with the following:
+
+```js
+import { useEffect, useState } from "react";
+import "./App.css";
+function App() {
+  const makeAPICall = async () => {
+    try {
+      const response = await fetch("http://localhost:8080/", { mode: "cors" });
+      const data = await response.json();
+      console.log({ data });
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  useEffect(() => {
+    makeAPICall();
+  }, []);
+  return (
+    <div className="App">
+      <h1>React Cors Guide</h1>
+    </div>
+  );
+}
+export default App;
+```
+
+In the above code, I have a function makeAPICall that is invoked when our <App> component mounts on the DOM. Inside the makeAPCall function, I make a GET request to the endpoint http://localhost:8080/ using the Fetch API.
+
+If you open the browser and check your console, instead of the response from the endpoint you'll see an error that looks like this:
+
+![CORS error.](https://images.ctfassets.net/nx13ojx82pll/7ePL8uJ1y5wVpUA4qMvKCl/b996a8ec1a0638995e155314653f221b/react-cors-guide-what-it-is-and-how-to-enable-it-picture-6.png?w=1574&h=753&q=80&fm=webp)
+
+The above is the typical CORS error that occurs because your browser is blocking requests to your server. Even though both your client and the server are running from localhost, your server is hosted on the port 8080 and your React client on port 3000. Therefore, both have a different origin, and the browser's SOP policy comes into play. Let's dive deeper into this CORS error and see a server-side solution to fix this problem.
+
+## CORS Should Always Be Handled From Server Side!
+
+Let's have a closer look at the above CORS error.
+
+```console
+Access to fetch at 'http://localhost:8080/' from origin 'http://localhost:3000'
+has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is
+present on the requested resource. If an opaque response serves your needs,
+set the request's mode to 'no-cors' to fetch the resource with CORS disabled.
+```
+
+It states that there's a missing Access-Control-Allow-Origin header on the resource you requested. If you think about it, your client doesn't have anything to do with CORS. It's only something that your browser imposes, and it suggests that your requested resource should be configured differently.
+
+Therefore, it makes sense to configure the response from the server in such a way that the browser identifies this as a CORS request. Hence, logically, CORS should always be handled from the server side. Later we'll explore a way to work around this on the client side, but the most reliable solution is to always make the response from the server CORS-friendly.
+
+## Enable CORS on Server Side
+
+Let's head back to our server's app.js file.
+
+```js
+app.get("/cors", (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.send({ msg: "This has CORS enabled 🎈" });
+});
+```
+
+Inside the request middleware callback, I first set the Access-Control-Allow-Origin header to an asterisk. The asterisk indicates that this resource can be requested by any client. Let's also change the endpoint in our React app.
+
+```js
+const response = await fetch("http://localhost:8080/cors", { mode: "cors" });
+```
+
+Now inspect the console.
+
+![CORS enabled.](https://images.ctfassets.net/nx13ojx82pll/6CLtVY9zWJxsZfQajcp0Rj/06d156eca94d1f9d41a607b1001bcc05/react-cors-guide-what-it-is-and-how-to-enable-it-picture-7.png?w=1526&h=746&q=80&fm=webp)
+
+Notice that the CORS error goes away and that you get back the response along with some JSON data. Everything works as intended. Great! All you needed to do was to attach that CORS stamp on your response. Note that you may need to restart your back-end server to see the above changes in action.
+
+You can also set the Access-Control-Allow-Origin to specific domains instead of the asterisk. For instance, setting it to http://localhost:3000 will only enable CORS for clients that are running on the specified URL, localhost:3000.
+
+```js
+app.get("/cors", (req, res) => {
+  res.set("Access-Control-Allow-Origin", "http://localhost:3000");
+  res.send({ msg: "This has CORS enabled 🎈" });
+});
+```
+
+While the server-side fix to CORS is the most technically coherent solution to this problem, there's a small catch. It requires you to make modifications on the server side. In some cases, you might not have access to server-side code.
+
+For example, if you're using a third-party service for authentication, notification, sending emails, etc., you might run into this problem. In such cases, there isn't much you can do but shoot an email to the developers asking them to enable CORS for your app. There's a neat trick specific to React apps that you can use to work around this problem. Let's see how it works.
+
+## Proxy Requests in a React App
+
+Have you ever tried to proxy your classmate during a lecture by shouting out to their roll call? That's how proxying works in API requests as well! You can tell your React app to proxy your requests to a server using the proxy property inside the package.json file.
+
+This is a simple one-step process. Go inside your app's package.json file and add the following property:
+
+```json
+{
+...
+"proxy":"http://localhost:8080"
+...
+}
+```
+
+Now if you restart your React development server, you'll notice that all requests are being served to http://localhost:8080 instead of http://localhost:3000. You've proxied your React development server to your back-end server. The above works exactly the same way for third-party services as well.
+
+Under the hood, when your React app requests resources from http://localhost:8080, it pretends to be requesting this resource from the origin http://localhost:8080 instead of http://localhost:3000. This seems in line with browser's SOP, and you no longer get the CORS error.
+Let's say you're using a service on https://randomservice.com and you come across the CORS error. You can add the URL inside the proxy property in your package.json file.
+
+```json
+{
+...
+"proxy":"https://randomservice.com"
+...
+}
+```
+
+The development server will only attempt to send requests without text/html in its Accept header to the proxy.
+
+Thus for the above method to work, you need to ensure that the server doesn't have text/html in its Accept header. In rare cases, you might need to specify more than one proxy URL. You can set up a proxy manually using a package http-proxy-middleware
