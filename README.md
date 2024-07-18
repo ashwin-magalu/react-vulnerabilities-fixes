@@ -14,7 +14,7 @@ However, just mapping a session ID to a user is not sufficient. Think about the 
 ## The useDeviceId Hook in React
 
 The device ID is something you'll need to retrieve from the client side. So how do we do that? We can use a library called FingerprintJS in our React app to do so. Here I have created a React hook that gets the device ID from the FingerprintJS library and returns it back.
-You'll need a Fingerprint browser token, an API secret key equivalent, for the above to work. I got mine by creating an account on FingerprintJS and grabbing that key from your [dashboard](https://dashboard.fingerprintjs.com/){:target="\_blank" rel="noopener"}.
+You'll need a Fingerprint browser token, an API secret key equivalent, for the above to work. I got mine by creating an account on FingerprintJS and grabbing that key from your [dashboard](https://dashboard.fingerprintjs.com/).
 
 Next, we also need the location data of the user. We can use the Geolocation API to retrieve the location information and IP address of the user. Note that there may be better services you could use to get more accurate and appropriate location data. However, the underlying principle is the same.
 
@@ -393,7 +393,7 @@ const response=await fetch('http://localhost:8080/?versionFile=v1.txt&&cd%20secr
 which would then execute the following command on the server:
 
 type v1.txt && cd secrets
-Now the attacker can access your secrets folder! This is just a simple example, but there are a ton of dangerous commands an attacker can execute. [Here's a detailed guide](https://auth0.com/blog/preventing-command-injection-attacks-in-node-js-apps/#A-Realistic-Attack){:target="\_blank" rel="noopener"} that tells you all the realistic attacks the attacker can commit using command injection once your system is compromised. For now, let's move ahead and see how we can fix this problem.
+Now the attacker can access your secrets folder! This is just a simple example, but there are a ton of dangerous commands an attacker can execute. [Here's a detailed guide](https://auth0.com/blog/preventing-command-injection-attacks-in-node-js-apps/#A-Realistic-Attack) that tells you all the realistic attacks the attacker can commit using command injection once your system is compromised. For now, let's move ahead and see how we can fix this problem.
 
 ### Prevent Command Injection Attack
 
@@ -435,7 +435,7 @@ Hence, the attacker won't be able to run any lethal shell commands.
 Use More Airtight Functions for Executing Shell Commands
 We use the exec function to execute the shell commands. According to NodeJS official docs, this function takes in a command that runs it as it is, "with space-separated arguments." Instead, you can use a more airtight function that disallows your server to run arbitrary commands.
 
-The execFile function takes in a file that contains some shell commands. Additionally, it also takes some arguments to run those commands. It's more secure as now you don't generate commands on the fly. Instead, you store them inside a bash file and can send some arguments specific to the command you want to execute. You can read more about this function [here](https://nodejs.org/api/child_process.html#child_process_child_process_execfile_file_args_options_callback){:target="\_blank" rel="noopener"}.
+The execFile function takes in a file that contains some shell commands. Additionally, it also takes some arguments to run those commands. It's more secure as now you don't generate commands on the fly. Instead, you store them inside a bash file and can send some arguments specific to the command you want to execute. You can read more about this function [here](https://nodejs.org/api/child_process.html#child_process_child_process_execfile_file_args_options_callback).
 
 ### Validate Input
 
