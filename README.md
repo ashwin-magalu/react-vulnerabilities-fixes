@@ -7,6 +7,7 @@ Authentication is handled mostly on the server side. However, there are a few te
 ## Map Session-ID to the Device ID and IP Address/Location
 
 Session-Id is a unique UUID that you create to map a session against a user in your database. For instance, if a user is authenticated in your app, your back-end server would send back a session ID. When the user logs out, this session ID is cleared.
+
 ![How session id works](https://images.ctfassets.net/nx13ojx82pll/191Q5tdmW6DxC1KoGbNcgw/7ea3f5de581b1060411de1715ca133e0/react-broken-authentication-guide-2.png?w=1600&h=900&q=80&fm=webp)
 
 However, just mapping a session ID to a user is not sufficient. Think about the case where an attacker is trying to authenticate in disguise as a legitimate user from their own device. In this case, the device ID will be able to tell you if a session was triggered from a different device.
@@ -24,6 +25,7 @@ Here's another hook you can use in your React app that gives you the user's loca
 Now let's quickly use these hooks to see if they're working. Inside App.js, I have simply invoked these hooks and displayed the information inside the template
 
 You can integrate these hooks with your client-side authentication. Every time a user attempts to log in or sign up, you can send this information to the server. The server can then validate the device ID and location information to send back a flag that indicates if the session is from a different location, different device, etc.
+
 ![Mapping the session id against the user's location and device id.](https://images.ctfassets.net/nx13ojx82pll/4lAXzzwb9HiKfS12yJTVaz/17e4141367d67de4809bebf88f41bd9e/react-broken-authentication-guide-4.png?w=1600&h=900&q=80&fm=webp)
 
 You can then alert the user accordingly or automatically sign them out by calling your Logout API.
@@ -41,7 +43,11 @@ Let's assume you get an idle session timeout from your server. The remaining two
 ## The useIdle Hook in React
 
 You'll need to install react-idle-timer first by running:
+
+```console
 npm install react-idle-timer --save
+```
+
 We'll abstract this logic into a separate hook called useIdle.js that looks like this
 
 ## Broken Authentication Due to Poor Session Management
@@ -61,6 +67,7 @@ For instance, if an attacker gets hold of a user's session ID, they will be able
 ## Implement Safe Session Management
 
 Most session management techniques cater to the server side. This is because the client only handles how to store the session ID. However, you need to be careful how and where you store your session ID in your React app.
+
 ![Avoid using query strings for storing information related to the session.](https://images.ctfassets.net/nx13ojx82pll/2tUpjOQWckUZ1y1F7zbuRl/618c79fddc4a50aeb93a94ba08e77254/react-broken-authentication-guide-7.png?w=1600&h=900&q=80&fm=webp)
 
 A lot of times developers store session-id in front-end URLs, making it clearly visible to users as well as attackers. Instead, you could store the session-id inside browser storage and use it via a custom React hook in whichever component or page of your application you need it.
@@ -82,18 +89,19 @@ That's precisely what XSS is. An attacker can exploit your application's vulnera
 ## How Can an XSS Attack Happen?
 
 One of the most common types of XSS attacks is a DOM-based XSS attack. When you mutate DOM directly, it becomes easy for an attacker to inject it with data containing malicious JavaScript.
-Consider the following HTML code. It simply renders some basic markup with an empty <div> element.
+Consider the following HTML code. It simply renders some basic markup with an empty div element.
 
+```html
 <html>
-   <body>
-       <div id="validation">
-       </div>
-       <input placeholder="Enter your referral code below" />
-       <button>Submit</button>
-   </body>
+  <body>
+    <div id="validation"></div>
+    <input placeholder="Enter your referral code below" />
+    <button>Submit</button>
+  </body>
 </html>
+```
 
-The above code renders an <input> element on the page with a submit button. On pressing the submit button, you fire a function. Inside the function, you evaluate what the user has entered. You then provide a feedback message to the user based on the result inside the empty <div> element.
+The above code renders an input element on the page with a submit button. On pressing the submit button, you fire a function. Inside the function, you evaluate what the user has entered. You then provide a feedback message to the user based on the result inside the empty div element.
 
 ```js
 const validationElement = document.getElementById("validation");
@@ -101,7 +109,7 @@ const validationMessage = `Oops! This seems like an invalid referral code.`;
 validationElement.append(validationMessage);
 ```
 
-Using the append method, you render a message inside your empty <div> element. However, this exposes a vulnerability in your application. Consider the following JavaScript code.
+Using the append method, you render a message inside your empty div element. However, this exposes a vulnerability in your application. Consider the following JavaScript code.
 
 ```js
 Oops! This seems like an invalid referral code.
@@ -112,7 +120,7 @@ Oops! This seems like an invalid referral code.
 </script>
 ```
 
-The attacker basically renders the validation message along with a malicious <script>. This was possible because the application was modifying DOM directly using the append() method on the <div>. Inside the <script>, the attacker can write code that steals your confidential and sensitive information. On similar grounds, if you use innerHTML to mutate DOM directly, you are exposing your application to a potential XSS attack.
+The attacker basically renders the validation message along with a malicious script. This was possible because the application was modifying DOM directly using the append() method on the div. Inside the script, the attacker can write code that steals your confidential and sensitive information. On similar grounds, if you use innerHTML to mutate DOM directly, you are exposing your application to a potential XSS attack.
 
 Thus, an XSS attack can be an alarming sight for your users. However, front-end frameworks have come a long way and provide some protection against such attacks out of the box. Let's look at how React handles these situations for you and how far it secures your application against an XSS attack.
 
@@ -120,25 +128,25 @@ Thus, an XSS attack can be an alarming sight for your users. However, front-end 
 
 Luckily, React does a few things under the hood to safeguard your application against XSS attacks. Let's rewrite the code in the previous section in React.
 
-Just like before, I have an <input> element with a <button> that fires the validateMessage function. I have created a state validationMessage that I set inside the validateMessage function using a setTimeout. Finally, I output the validationMessage inside an empty <div> element using JSX.
+Just like before, I have an input element with a button that fires the validateMessage function. I have created a state validationMessage that I set inside the validateMessage function using a setTimeout. Finally, I output the validationMessage inside an empty div element using JSX.
 
-<div>
-{validationMessage}
-</div>
+```html
+<div>{validationMessage}</div>
+```
 
-React outputs elements and data inside them using auto escaping. It interprets everything inside validationMessage as a string and does not render any additional HTML elements. This means that if validationMessage was somehow infiltrated by an attacker with some <script> tags, React would simply ignore it and render it as a string.
+React outputs elements and data inside them using auto escaping. It interprets everything inside validationMessage as a string and does not render any additional HTML elements. This means that if validationMessage was somehow infiltrated by an attacker with some script tags, React would simply ignore it and render it as a string.
 
 ```js
 const validateMessage = async () => {
   setTimeout(() => {
-    setValidationMessage(`Invalid referral code, <script></script>`);
+    setValidationMessage(`Invalid referral code, <script></script,.>`);
   }, 1000);
 };
 ```
 
-If you check now, the <script> tags get rendered as strings instead of a DOM element.
+If you check now, the script tags get rendered as strings instead of a DOM element.
 
-Now, any JavaScript enclosed by the <script> tags will not be executed. Thus, the above behavior protects your application from an attacker trying to execute a DOM-based XSS attack.
+Now, any JavaScript enclosed by the script tags will not be executed. Thus, the above behavior protects your application from an attacker trying to execute a DOM-based XSS attack.
 But does that mean your React application is safe from all kinds of XSS attacks? We only considered the use case of outputting an element or a string using JSX. What if we actually need to render HTML elements directly on the DOM from inside the JSX?
 
 ## Render HTML Elements Dynamically in React
@@ -165,17 +173,21 @@ export default App;
 ```
 
 Inside the component, I have a blog variable that stores your blog's content wrapped in proper HTML elements. If you directly output the blog variable inside your JSX, it would be interpreted as a string.
+
 ![Rendering a blog using JSX.](https://images.ctfassets.net/nx13ojx82pll/6Sj0KuXV3xZiyAYahaEgIN/c0b334da70638954354e89608ee0257a/react-xss-guide-examples-and-prevention-picture-3.png?w=1262&h=178&q=80&fm=webp)
 
 While that safeguards your application against a DOM-based XSS attack, it ruins the experience for your users. Therefore, you need to render your blog as a markup instead of rendering it as a string. This will render your content along with its dedicated HTML tags.
 
 React allows you to do that using a prop called dangerouslySetInnerHTML. You can pass this prop to any generic container element. It takes in an object with a key \_html whose value is the HTML markup you wish to render inside the container.
 
+```html
 <div className="App">
-<div dangerouslySetInnerHTML={{__html:blog}}>
+  <div dangerouslySetInnerHTML="{{__html:blog}}"></div>
 </div>
-</div>
+```
+
 If you check back now, you should see your blog with its intended formatting.
+
 ![Rendering formatted blog using dangerouslySetInnerHTML](https://images.ctfassets.net/nx13ojx82pll/4xfecPWZ7qdMK4AcFkFmn5/b39d51b4c11d64a2f30fa1c6704a9219/react-xss-guide-examples-and-prevention-picture-4.png?w=1284&h=234&q=80&fm=webp)
 
 All HTML elements contained by the blog variable are properly rendered on the DOM. However, this puts us back at square one! We again have an XSS vulnerability in our application, and the attacker could inject some malicious scripts inside the blog variable. In fact, the dangerouslySetInnerHTML prop intentionally has the word "dangerous" in it to remind you that you should be cautious while using it.
@@ -185,7 +197,11 @@ All HTML elements contained by the blog variable are properly rendered on the DO
 In order to protect your application from a DOM-based XSS attack, you must sanitize data that contains HTML elements before rendering it on the DOM. There are a number of libraries out there that you can use. One such library is DOMPurify. Let's see how we can use it in our React application.
 
 Let's first install DOMPurify inside our React application by running the following command:
+
+```console
 npm i dompurify
+```
+
 To use it, import DOMPurify from the library at the top as shown:
 
 ```js
@@ -200,10 +216,12 @@ const sanitizedBlog = DOMPurify.sanitize(blog);
 
 Finally, we can now use sanitizedBlog instead of blog inside the dangerouslySetInnerHTML prop as shown:
 
+```html
 <div className="App">
-<div dangerouslySetInnerHTML={{__html: sanitizedBlog}}>
+  <div dangerouslySetInnerHTML="{{__html:" sanitizedBlog}}></div>
 </div>
-</div>
+```
+
 Everything should still work the same, but your sanitizedBlog is now protected against any malicious XSS injections.
 
 ## Escape Hatches in React Can Cause an XSS Attack
@@ -234,7 +252,7 @@ function App() {
 export default App;
 ```
 
-I have a simple <div> with the ref divRef. When the component's DOM loads, I change the content inside this <div> using the innerHTML property on its ref. An attacker can easily inject some malicious script by overriding the innerHTML of the <div> inside the useEffect.
+I have a simple div with the ref divRef. When the component's DOM loads, I change the content inside this div using the innerHTML property on its ref. An attacker can easily inject some malicious script by overriding the innerHTML of the div inside the useEffect.
 
 The trick here is simple. Don't use innerHTML to mutate DOM at all! This is yet again a similar situation where you're modifying DOM directly. If you are using refs to add some content inside your HTML elements, use innerText instead.
 
@@ -244,7 +262,7 @@ useEffect(() => {
 }, [myName]);
 ```
 
-Now, even if the attacker is able to inject some <script> tags through divRef, it will be rendered as a string in your application. This kind of pattern is rare, and you should always avoid mutating DOM directly using refs.
+Now, even if the attacker is able to inject some script tags through divRef, it will be rendered as a string in your application. This kind of pattern is rare, and you should always avoid mutating DOM directly using refs.
 
 # XML External Entities
 
@@ -262,21 +280,29 @@ In essence, this vulnerability could render your server insecure given enough pe
 
 The following example is a bare-bones XML document containing an item XML element.
 
+```html
 <item id="1">
-<title>Toilet Paper</title>
+  <title>Toilet Paper</title>
 </item>
+```
+
 Great, but where's the external entity?
 
 You would represent an external entity by using a system identifier within a DOCTYPE header.
 
+```html
 <!ENTITY xxe SYSTEM "https://www.google.com" >]>
+```
 
 The purpose of this header is to add more properties to the XML data structure. To illustrate this further, the code below contains an external XML entity that would try to compromise a potentially perpetual file.
 
+```html
 <!ENTITY xxe SYSTEM "file:///gkr/rand" >]>
 <item id="1">
 <title>&xxe;</title>
 </item>
+```
+
 This attack would result in a denial of service (DoS) attack and bring your server to its knees. Yikes!
 
 As we've mentioned in other articles, these entities can access local or remote content, so you need to protect the sensitive files on the server.
@@ -360,7 +386,9 @@ Typical command injection attacks happen directly on the server, but they may al
 
 To set up the latter, run the following command:
 
-    cd command-injection-server && npm init -y && npm i express
+```console
+cd command-injection-server && npm init -y && npm i express
+```
 
 Let's assume that your back end receives the name of a text file stored locally on your server. This text file stores the version of your server. You need to validate if your back end and front end are running on the same version. So, you make an HTTP request to an endpoint. You send the version file as a query parameter from the front end to an endpoint. This endpoint checks if that version file exists on the server. If it does, you send back the contents of the file. Otherwise, you throw an error.
 
@@ -369,9 +397,11 @@ To demonstrate, let's make a v1.txt file in the root directory of your project. 
 App Version 1
 
 Your project structure should look like this:
+
 ![Version API Back-End Project Structure.](https://images.ctfassets.net/nx13ojx82pll/ATjP3tLqD71iXMyHdL1kw/5c1b0ac97b01e0c206bb17a069210692/react-command-injection-examples-and-prevention-picture-2.png?w=1012&h=956&q=80&fm=webp)
 
 If you now make a request to http://localhost:8080/?versionFile=v1.txt endpoint, you'll get back the following response:
+
 ![Version API Response.](https://images.ctfassets.net/nx13ojx82pll/6w7Zidlq5FYproMakObi4U/ad3778cae7a7e3469a8c528673c53830/react-command-injection-examples-and-prevention-picture-3.png?w=1800&h=434&q=80&fm=webp)
 
 ### Consume Version API on Front End
@@ -379,6 +409,7 @@ If you now make a request to http://localhost:8080/?versionFile=v1.txt endpoint,
 Rewrite your App.js file
 
 In the code, I simply invoke a method that makes an HTTP GET request to the server at the http://localhost:8080/?versionFile=v1.txt endpoint. I call this function inside the useEffect so that it's fired as soon as the page loads. If you check the console, you'll get back the app version in response as shown
+
 ![Version API Front End.](https://images.ctfassets.net/nx13ojx82pll/1UPVe0LcOPNU72QeO2QBLb/eb0a46f984a02151a8b27c3947184f55/react-command-injection-examples-and-prevention-picture-4.png?w=1737&h=268&q=80&fm=webp)
 
 ### Command Injection Vulnerability
@@ -392,7 +423,10 @@ Let's say we also had a secrets folder that contains all the sensitive configura
 const response=await fetch('http://localhost:8080/?versionFile=v1.txt&&cd%20secrets',{mode:'cors'});
 which would then execute the following command on the server:
 
+```console
 type v1.txt && cd secrets
+```
+
 Now the attacker can access your secrets folder! This is just a simple example, but there are a ton of dangerous commands an attacker can execute. [Here's a detailed guide](https://auth0.com/blog/preventing-command-injection-attacks-in-node-js-apps/#A-Realistic-Attack) that tells you all the realistic attacks the attacker can commit using command injection once your system is compromised. For now, let's move ahead and see how we can fix this problem.
 
 ### Prevent Command Injection Attack
